@@ -5,31 +5,24 @@ import {
   generateRefreshToken,
   generateOTP,
 } from "../utils/TokenGenerator.js";
-import AdminModel from "../models/AdminSchema.js";
 import UserModel from "../models/UserSchema.js";
-import AgencyModel from "../models/AgencySchema.js";
-import OperatorModel from "../models/OperatorSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
-import { HandleUpdateAdmin, HandleUpdateAgency, HandleUpdateOperator, HandleUpdateUser } from "../helpers/UpdateProfileHelper.js";
+import AdminModel from "../models/AdminSchema.js";
+import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/register
 const register = async (req, res, next) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, phone, password, deviceId, role } = req.body;
 
-    const existingUser =
-      (await AdminModel.findOne({
-        $or: [{ username }, { email }],
-      })) ||
-      (await UserModel.findOne({
-        $or: [{ username }, { email }],
-      })) ||
-      (await AgencyModel.findOne({
-        $or: [{ username }, { email }],
-      }));
+    const existingUser = (await UserModel.findOne({
+      $or: [{ username }, { email }],
+    })) || (await AdminModel.findOne({
+      $or: [{ username }, { email }],
+    }));
     if (existingUser) {
       return res
         .status(400)
@@ -38,34 +31,80 @@ const register = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new AdminModel({
-      username,
-      email,
-      password: hashedPassword,
-    });
+    if (role === "Admin") {
 
-    await newUser.save();
+      const validateAdmin = await AdminModel.find();
+      if (validateAdmin.length !== 0) {
+        return res.status(400).json({ message: "There can only be one admin" })
+      }
+      const newUser = new AdminModel({
+        username,
+        email,
+        phone,
+        password: hashedPassword,
+      });
 
-    const accessToken = generateAccessToken(newUser);
-    const refreshToken = generateRefreshToken(newUser);
+      await newUser.save();
 
-    newUser.refreshToken = refreshToken;
-    await newUser.save();
+      // Generate tokens
+      const accessToken = generateAccessToken(newUser);
+      const refreshToken = generateRefreshToken(newUser, deviceId || "Web");
+      newUser.refreshTokens.push({
+        token: refreshToken,
+        deviceId: deviceId || "Web",
+      });
+      await newUser.save();
 
-    const userDetails = {
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
-      _id: newUser._id,
-    };
+      const userDetails = {
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        _id: newUser._id,
+      };
 
-    // Return tokens
-    res.status(201).json({
-      message: "User registered successfully",
-      accessToken,
-      refreshToken,
-      user: userDetails,
-    });
+      // Return tokens
+      return res.status(201).json({
+        message: "User registered successfully",
+        accessToken,
+        refreshToken,
+        user: userDetails,
+      });
+    } else if (role === "User") {
+
+      const newUser = new UserModel({
+        username,
+        email,
+        phone,
+        password: hashedPassword,
+      });
+
+      await newUser.save();
+      // Generate tokens
+      const accessToken = generateAccessToken(newUser);
+      const refreshToken = generateRefreshToken(newUser, deviceId || "Web");
+      newUser.refreshTokens.push({
+        token: refreshToken,
+        deviceId: deviceId || "Web",
+      });
+      await newUser.save();
+
+      const userDetails = {
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        _id: newUser._id,
+      };
+
+      // Return tokens
+      res.status(201).json({
+        message: "User registered successfully",
+        accessToken,
+        refreshToken,
+        user: userDetails,
+      });
+    }
+
+
   } catch (err) {
     next(err);
   }
@@ -76,21 +115,13 @@ const register = async (req, res, next) => {
 // ENDPOINT: /api/login
 const login = async (req, res, next) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, password, deviceId } = req.body;
 
-    const user =
-      (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await AgencyModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await OperatorModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      }));
+    const user = (await UserModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    })) || (await AdminModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    }));
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -101,58 +132,20 @@ const login = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const accessToken = generateAccessToken(user, deviceId);
+    const refreshToken = generateRefreshToken(user, deviceId);
 
-    user.refreshToken = refreshToken;
+    user.refreshTokens = user.refreshTokens.filter(
+      (entry) => entry.deviceId !== deviceId
+    );
+
+    user.refreshTokens.push({
+      token: refreshToken,
+      deviceId: deviceId,
+    });
     await user.save();
 
-    let details;
-
-    if (user.role.includes("Admin")) {
-      details = {
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        _id: user._id,
-        createdAt: user.createdAt,
-      };
-    } else if (user.role.includes("Agency")) {
-      details = {
-        username: user.username,
-        agencyName: user.agencyName,
-        companyCode: user.companyCode,
-        email: user.email,
-        role: user.role,
-        _id: user._id,
-        createdAt: user.createdAt,
-      };
-    } else if (user.role.includes("Operator")) {
-      details = {
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        agencyID: user.agencyID,
-        officeID: user.officeID,
-        status: user.status,
-        _id: user._id,
-        createdAt: user.createdAt,
-      };
-    } else {
-      details = {
-        username: user.username,
-        email: user.email,
-        country: user.country,
-        countryCode: user.countryCode,
-        phone: user.phone,
-        role: user.role,
-        _id: user._id,
-        createdAt: user.createdAt,
-      };
-    }
-
-    res.status(200).json({ accessToken, refreshToken, user: details });
+    res.status(200).json({ accessToken, refreshToken, user: user });
   } catch (err) {
     next(err);
   }
@@ -162,7 +155,7 @@ const login = async (req, res, next) => {
 // METHOD : POST
 // ENDPOINT: /api/refresh
 const refreshToken = async (req, res) => {
-  const { token } = req.body;
+  const { token, deviceId } = req.body;
 
   if (!token) {
     return res.status(403).json({ message: "Refresh token is required" });
@@ -171,19 +164,21 @@ const refreshToken = async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await AdminModel.findById(decoded.id)) ||
-      (await UserModel.findById(decoded.id));
+    const user = (await UserModel.findById(decoded.id)) || (await AdminModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.refreshToken !== token) {
+    const matchToken = user.refreshTokens.find(
+      (entry) => entry.token === token
+    );
+
+    if (!matchToken) {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = generateAccessToken(user, deviceId);
 
     res.status(200).json({ accessToken });
   } catch (err) {
@@ -191,11 +186,12 @@ const refreshToken = async (req, res) => {
   }
 };
 
+
 // LOGOUT (Invalidate refresh token)
 // METHOD : POST
 // ENDPOINT: /api/logout
 const logout = async (req, res) => {
-  const { token } = req.body;
+  const { token, deviceId } = req.body;
 
   if (!token) {
     return res.status(400).json({ message: "Refresh token is required" });
@@ -204,17 +200,17 @@ const logout = async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await AdminModel.findById(decoded.id)) ||
-      (await OperatorModel.findById(decoded.id)) ||
-      (await AgencyModel.findById(decoded.id)) ||
-      (await UserModel.findById(decoded.id));
+    const user = await UserModel.findById(decoded.id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.refreshToken = null;
+    // ✅ Remove the matching refresh token by token and optionally deviceId
+    user.refreshTokens = user.refreshTokens.filter(
+      (entry) => entry.token !== token && (!deviceId || entry.deviceId !== deviceId)
+    );
+
     await user.save();
 
     res.status(200).json({ message: "Logged out successfully" });
@@ -223,25 +219,18 @@ const logout = async (req, res) => {
   }
 };
 
+
 // FORGET PASSWORD
 // METHOD: POST
 // ENDPOINT: /api/forget-password
 const forgetPassword = async (req, res, next) => {
   try {
     const { identifier } = req.body;
-    const user =
-      (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await AgencyModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await OperatorModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      }));
+    const user = (await UserModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    })) || (await AdminModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    }));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -271,19 +260,11 @@ const forgetPassword = async (req, res, next) => {
 const verifyOtp = async (req, res, next) => {
   try {
     const { identifier, otp } = req.body;
-    const user =
-      (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await AgencyModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await OperatorModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      }));
+    const user = (await UserModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    })) || (await AdminModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    }));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -309,19 +290,9 @@ const verifyOtp = async (req, res, next) => {
 const changePassword = async (req, res, next) => {
   try {
     const { identifier, otp, newPassword } = req.body;
-    const user =
-      (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await AgencyModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      })) ||
-      (await OperatorModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
-      }));
+    const user = await UserModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -354,80 +325,13 @@ const HandleGetProfile = async (req, res, next) => {
 
     const { id } = req.params;
 
-    const user =
-      (await AdminModel.findById(id)) ||
-      (await UserModel.findById(id)) ||
-      (await AgencyModel.findById(id)) ||
-      (await OperatorModel.findById(id));
+    const user = await UserModel.findById(id)
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.role.includes("Agency")) {
-
-      return res.status(200).json({ profile: user })
-
-
-    } else if (user.role.includes("Operator")) {
-
-      const pipeline = [{
-        $match: {
-          _id: new mongoose.Types.ObjectId(id)
-        },
-      }, {
-        $lookup: {
-          from: "offices",
-          localField: "officeID",
-          foreignField: "_id",
-          as: "officeDetails",
-        },
-      },
-      {
-        $unwind: "$officeDetails"
-      },
-      {
-        $lookup: {
-          from: "agencies",
-          localField: "agencyID",
-          foreignField: "_id",
-          as: "agencyDetails",
-        },
-      },
-      {
-        $unwind: "$agencyDetails"
-      },
-      {
-        $project: {
-          _id: 1,
-          username: 1,
-          email: 1,
-          phone: 1,
-          role: 1,
-          status: 1,
-          agency: {
-            agencyID: "$agencyDetails._id",
-            agencyName: "$agencyDetails.agencyName",
-            companyCode: "$agencyDetails.companyCode",
-          },
-          office: {
-            officeID: "$officeDetails._id",
-            officeName: "$officeDetails.officeName",
-            address: "$officeDetails.address",
-          }
-        }
-      }]
-      const user = await OperatorModel.aggregate(pipeline);
-
-      return res.status(200).json({ profile: user })
-
-    } else if (user.role.includes("Admin")) {
-
-      return res.status(200).json({ profile: user })
-
-    } else {
-      res.status(400).json({ message: "Invalid Role" })
-    }
+    res.status(200).json({ profile: user })
 
   } catch (error) {
     console.log(error)
@@ -438,39 +342,63 @@ const HandleGetProfile = async (req, res, next) => {
 
 // UPDATE PROFILE
 // METHOD: PATCH
-// ENDPOINT: /api/update-user/:id
+// ENDPOINT: /api/update-profile/:id
 const HandleUpdateProfile = async (req, res, next) => {
   try {
-
     const { id } = req.params;
 
-    const user =
-      (await AdminModel.findById(id)) ||
-      (await UserModel.findById(id)) ||
-      (await AgencyModel.findById(id)) ||
-      (await OperatorModel.findById(id));
+    let user = await UserModel.findById(id);
+    let model = UserModel;
 
+    if (!user) {
+      user = await AdminModel.findById(id);
+      model = AdminModel;
+    }
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.role.includes("Agency")) {
-      return HandleUpdateAgency(req, res, next, user)
-    } else if (user.role.includes("Operator")) {
-      return HandleUpdateOperator(req, res, next, user)
-    } else if (user.role.includes("Admin")) {
-      return HandleUpdateAdmin(req, res, next, user)
-    } else if (user.role.includes("User")) {
-      return HandleUpdateUser(req, res, next, user)
-    } else {
-      return res.status(400).json({ message: "Bad Request" });
+    const { oldPassword, newPassword } = req.body;
+
+    const profilePicture =
+      req?.files &&
+      req.files.profilePicture &&
+      req?.files?.profilePicture?.[0];
+
+    const updatedFields = {};
+
+    if (profilePicture) {
+      updatedFields.profilePicture = ExtractRelativeFilePath(profilePicture);
     }
 
+    if (oldPassword && !newPassword) {
+      return res.status(400).json({ message: "new password is required when you enter old password" });
+    }
+
+    if (oldPassword && newPassword) {
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Old password is incorrect" });
+      }
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      updatedFields.password = hashedNewPassword;
+    }
+
+    await model.updateOne({ _id: id }, { $set: updatedFields });
+
+    const updatedUser = await model.findById(id);
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
     next(error);
   }
-}
+};
+
+
 
 export {
   register,

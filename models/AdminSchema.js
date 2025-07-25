@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-const UserSchema = new Schema(
+const AdminSchema = new Schema(
   {
     username: {
       type: String,
@@ -18,8 +18,8 @@ const UserSchema = new Schema(
     password: String,
     role: {
       type: String,
-      enum: ["User"],
-      default: "User",
+      enum: ["Admin"],
+      default: "Admin",
     },
     refreshTokens: {
       type: [
@@ -47,6 +47,6 @@ const UserSchema = new Schema(
   { timestamps: true }
 );
 
-const UserModel = mongoose.model("users", UserSchema);
+const AdminModel = mongoose.model("admins", AdminSchema);
 
-export default UserModel;
+export default AdminModel;

@@ -18,10 +18,11 @@ import {
 } from "../validations/AuthValidations.js";
 import AuthMiddleware from "../middlewares/AuthMiddleware.js";
 import AccessMiddleware from "../middlewares/AccessMiddleware.js";
+import { CreateUploadMiddleware } from "../middlewares/MulterMiddleware.js";
 
 const router = express.Router();
 
-router.post("/register", validate(adminSchema), register);
+router.post("/register", validate(userSchema), register);
 
 router.post("/login", validate(loginSchema), login);
 
@@ -36,7 +37,11 @@ router.patch("/change-password", changePassword);
 router.get("/profile/:id", HandleGetProfile)
 
 
-router.patch("/update-profile/:id", AuthMiddleware, AccessMiddleware(["Admin", "Operator", "Agency"]), HandleUpdateProfile)
+router.patch("/update-profile/:id",
+  AuthMiddleware,
+  AccessMiddleware(["Admin", "User"]),
+  CreateUploadMiddleware([{ name: "profilePicture", isMultiple: true }]),
+  HandleUpdateProfile)
 
 
 
