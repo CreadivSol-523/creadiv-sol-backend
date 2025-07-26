@@ -16,9 +16,17 @@ import connectDB from "./config/DB.js";
 import AuthRoutes from "./routes/AuthRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
+// Socket
+import { Socket } from "socket.io";
+import { Server } from "socket.io";
+import { createServer } from "http";
+import { SocketWrapper } from "./socket/SocketWrapper.js";
+
 dotenv.config();
 
 const app = express();
+
+const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
 
@@ -70,6 +78,17 @@ app.use(ErrorHandler);
 // === Server Start ===
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+const io = new Server(httpServer, {
+  pingTimeout: 60000,
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true,
+  },
+});
+
+SocketWrapper(io)
