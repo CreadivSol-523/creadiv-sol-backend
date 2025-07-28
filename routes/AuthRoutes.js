@@ -27,22 +27,21 @@ router.post("/register", validate(userSchema), register);
 router.post("/login", validate(loginSchema), login);
 
 router.post("/refresh", refreshToken);
+
 router.post("/logout", logout);
 
 router.patch("/forget-password", forgetPassword);
+
 router.patch("/verify-otp", verifyOtp);
+
 router.patch("/change-password", changePassword);
 
-
 router.get("/profile/:id", HandleGetProfile)
-
 
 router.patch("/update-profile/:id",
   AuthMiddleware,
   AccessMiddleware(["Admin", "User"]),
   CreateUploadMiddleware([{ name: "profilePicture", isMultiple: true }]),
   HandleUpdateProfile)
-
-
 
 export default router;

@@ -10,6 +10,7 @@ import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
 import AdminModel from "../models/AdminSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
+import OtpVerificationModel from "../models/UserOtpVerification.js";
 
 // REGISTER
 // METHOD : POST
@@ -71,36 +72,51 @@ const register = async (req, res, next) => {
       });
     } else if (role === "User") {
 
-      const newUser = new UserModel({
-        username,
-        email,
-        phone,
-        password: hashedPassword,
+      const otp = generateOTP();
+      const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      autoMailer({
+        to: email,
+        subject: "Password Reset OTP",
+        message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
       });
 
-      await newUser.save();
+      const createUserOtp = new OtpVerificationModel({
+        identifier: email,
+        otp: otp,
+        otpExpire: otpExpire
+      })
+
+      await createUserOtp.save();
+
+
+      // const newUser = new UserModel({
+      //   username,
+      //   email,
+      //   phone,
+      //   password: hashedPassword,
+      // });
+
+      // await newUser.save();
+
       // Generate tokens
-      const accessToken = generateAccessToken(newUser);
-      const refreshToken = generateRefreshToken(newUser, deviceId || "Web");
-      newUser.refreshTokens.push({
-        token: refreshToken,
-        deviceId: deviceId || "Web",
-      });
-      await newUser.save();
+      // const accessToken = generateAccessToken(newUser);
+      // const refreshToken = generateRefreshToken(newUser, deviceId || "Web");
+      // newUser.refreshTokens.push({
+      //   token: refreshToken,
+      //   deviceId: deviceId || "Web",
+      // });
+      // await newUser.save();
 
-      const userDetails = {
-        username: newUser.username,
-        email: newUser.email,
-        role: newUser.role,
-        _id: newUser._id,
-      };
+      // const userDetails = {
+      //   username: newUser.username,
+      //   email: newUser.email,
+      //   role: newUser.role,
+      //   _id: newUser._id,
+      // };
 
-      // Return tokens
       res.status(201).json({
-        message: "User registered successfully",
-        accessToken,
-        refreshToken,
-        user: userDetails,
+        message: "Otp sent to your email",
       });
     }
 
@@ -259,26 +275,96 @@ const forgetPassword = async (req, res, next) => {
 // ENDPOINT: /api/verify-otp
 const verifyOtp = async (req, res, next) => {
   try {
-    const { identifier, otp } = req.body;
-    const user = (await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
-    })) || (await AdminModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
-    }));
+    const { identifier, otp, type } = req.body;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!type || type === "") {
+      return res.status(400).json({ message: "Type Field is required" })
     }
-    if (!user.otp || !user.otpExpire) {
-      return res.status(400).json({ message: "No OTP requested." });
+
+    if (type === "signup") {
+
+      const { username, email, phone, password, deviceId } = req.body;
+
+      if (!username || !email || !phone || !password || !deviceId) {
+        return res.status(400).json({ message: "Please fill all the required fields" });
+      }
+
+      if (username === "" || email === "" || phone === "" || password === "" || deviceId === "") {
+        return res.status(400).json({ message: "Please fill all the required fields" })
+      }
+
+      const findOtp = await OtpVerificationModel.findOne({ identifier: identifier })
+      if (!findOtp) {
+        return res.status(404).json({ message: "Otp not found" });
+      }
+      if (!findOtp.otp || !findOtp.otpExpire) {
+        return res.status(400).json({ message: "No OTP requested." });
+      }
+      if (findOtp.otp !== otp) {
+        return res.status(400).json({ message: "Invalid OTP." });
+      }
+      if (findOtp.otpExpire < new Date()) {
+        return res.status(400).json({ message: "OTP expired." });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = new UserModel({
+        username,
+        email,
+        phone,
+        password: hashedPassword,
+        role: "User"
+      });
+
+      await newUser.save();
+
+      // Generate tokens
+      const accessToken = generateAccessToken(newUser);
+      const refreshToken = generateRefreshToken(newUser, deviceId || "Web");
+      newUser.refreshTokens.push({
+        token: refreshToken,
+        deviceId: deviceId || "Web",
+      });
+      await newUser.save();
+
+      const userDetails = {
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        _id: newUser._id,
+      };
+
+      await OtpVerificationModel.findOneAndDelete({ identifier: identifier })
+
+      return res.status(200).json({ accessToken, refreshToken, user: newUser });
+      
+    } else if (type === "otp") {
+
+      const user = (await UserModel.findOne({
+        $or: [{ email: identifier }, { username: identifier }],
+      })) || (await AdminModel.findOne({
+        $or: [{ email: identifier }, { username: identifier }],
+      }));
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (!user.otp || !user.otpExpire) {
+        return res.status(400).json({ message: "No OTP requested." });
+      }
+      if (user.otp !== otp) {
+        return res.status(400).json({ message: "Invalid OTP." });
+      }
+      if (user.otpExpire < new Date()) {
+        return res.status(400).json({ message: "OTP expired." });
+      }
+      return res.status(200).json({ message: "OTP verified.", identifier, otp });
+    } else {
+      res.status(400).json({ message: "Invalid Request" });
     }
-    if (user.otp !== otp) {
-      return res.status(400).json({ message: "Invalid OTP." });
-    }
-    if (user.otpExpire < new Date()) {
-      return res.status(400).json({ message: "OTP expired." });
-    }
-    res.status(200).json({ message: "OTP verified.", identifier, otp });
+
+
   } catch (err) {
     next(err);
   }
