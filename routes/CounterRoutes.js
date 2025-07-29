@@ -10,6 +10,6 @@ const router = express.Router();
 
 router.patch("/update-seq", AuthMiddleware, AccessMiddleware(["Admin", "User"]), handleRealtimeCounter)
 
-router.get("/get-seq", AuthMiddleware, AccessMiddleware(["Admin", "User"]), handleGetRealtimeCounter)
+router.get("/get-seq", handleGetRealtimeCounter)
 
 export default router;
