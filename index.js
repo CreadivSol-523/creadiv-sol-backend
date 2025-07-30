@@ -17,11 +17,9 @@ import AuthRoutes from "./routes/AuthRoutes.js";
 import CounterRoutes from "./routes/CounterRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
-
 dotenv.config();
 
 const app = express();
-
 
 app.use(SecurityHeaders);
 
@@ -57,6 +55,10 @@ app.use(
   },
   express.static("uploads")
 );
+
+app.get("/", (req, res) => {
+  res.status(200).json({ heath: "Ok" });
+});
 
 // === Rate Limiter
 app.use(RateLimiter);
