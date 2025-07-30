@@ -57,7 +57,7 @@ app.use(
 );
 
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "Heath: Ok" });
+  res.status(200).json({ heath: "Ok" });
 });
 
 // === Rate Limiter
