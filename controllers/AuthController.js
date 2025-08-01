@@ -455,7 +455,7 @@ const HandleUpdateProfile = async (req, res, next) => {
     //   folder: `profiles`,
     // }) : '';
 
-    // const updatedFields = {};
+    const updatedFields = {};
 
     // if (profilePicture) {
     //   updatedFields.profilePicture = uploadResult.secure_url;
