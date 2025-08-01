@@ -41,7 +41,7 @@ const AdminSchema = new Schema(
     },
     profilePicture: {
       type: String,
-      default: "uploads/placeholder-profile.png"
+      default: "https://res.cloudinary.com/djnsp1p8r/image/upload/v1754084452/placeholder-profile_girwxh.png"
     }
   },
   { timestamps: true }

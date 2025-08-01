@@ -17,6 +17,10 @@ import AuthRoutes from "./routes/AuthRoutes.js";
 import CounterRoutes from "./routes/CounterRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
+// Cloudinary
+import { v2 as cloudinary } from "cloudinary";
+import fileUpload from "express-fileupload";
+
 dotenv.config();
 
 const app = express();
@@ -37,6 +41,15 @@ app.use(
     methods: ["POST", "GET", "PATCH", "DELETE"],
   })
 );
+
+// === Cloudinary Configuration ===
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_Cloud,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  api_key: process.env.CLOUDINARY_API_KEY
+})
+
+app.use(fileUpload({ useTempFiles: true }));
 
 // === Security Header Middleware ===
 app.use(

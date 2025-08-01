@@ -41,7 +41,6 @@ router.get("/profile/:id", HandleGetProfile)
 router.patch("/update-profile/:id",
   AuthMiddleware,
   AccessMiddleware(["Admin", "User"]),
-  CreateUploadMiddleware([{ name: "profilePicture", isMultiple: false }]),
   HandleUpdateProfile)
 
 export default router;
