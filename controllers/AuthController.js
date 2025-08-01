@@ -11,6 +11,7 @@ import mongoose from "mongoose";
 import AdminModel from "../models/AdminSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import OtpVerificationModel from "../models/UserOtpVerification.js";
+import { v2 as cloudinary } from "cloudinary";
 
 // REGISTER
 // METHOD : POST
@@ -447,15 +448,17 @@ const HandleUpdateProfile = async (req, res, next) => {
 
     const { oldPassword, newPassword } = req.body;
 
-    const profilePicture =
-      req?.files &&
-      req.files.profilePicture &&
-      req?.files?.profilePicture?.[0];
+
+    const profilePicture = req?.files?.profilePicture;
+    const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
+      resource_type: 'image',
+      folder: `profiles`,
+    }) : '';
 
     const updatedFields = {};
 
     if (profilePicture) {
-      updatedFields.profilePicture = ExtractRelativeFilePath(profilePicture);
+      updatedFields.profilePicture = uploadResult.secure_url;
     }
 
     if (oldPassword && !newPassword) {
