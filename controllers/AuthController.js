@@ -449,17 +449,17 @@ const HandleUpdateProfile = async (req, res, next) => {
     const { oldPassword, newPassword } = req.body;
 
 
-    const profilePicture = req?.files?.profilePicture;
-    const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
-      resource_type: 'image',
-      folder: `profiles`,
-    }) : '';
+    // const profilePicture = req?.files?.profilePicture;
+    // const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
+    //   resource_type: 'image',
+    //   folder: `profiles`,
+    // }) : '';
 
-    const updatedFields = {};
+    // const updatedFields = {};
 
-    if (profilePicture) {
-      updatedFields.profilePicture = uploadResult.secure_url;
-    }
+    // if (profilePicture) {
+    //   updatedFields.profilePicture = uploadResult.secure_url;
+    // }
 
     if (oldPassword && !newPassword) {
       return res.status(400).json({ message: "new password is required when you enter old password" });

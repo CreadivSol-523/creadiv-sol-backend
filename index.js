@@ -49,7 +49,7 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY
 })
 
-app.use(fileUpload({ useTempFiles: true }));
+app.use(fileUpload({ useTempFiles: false }));
 
 // === Security Header Middleware ===
 app.use(
