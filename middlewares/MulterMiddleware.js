@@ -6,7 +6,9 @@ import fs from "fs";
 const MAX_SIZE = 1 * 1024 * 1024;
 
 // Upload destination base path
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+// const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const UPLOAD_DIR = "/tmp/uploads";
+
 
 // Ensure directory exists
 const ensureUploadPath = () => {
