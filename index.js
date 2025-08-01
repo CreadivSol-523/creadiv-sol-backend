@@ -49,7 +49,10 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY
 })
 
-app.use(fileUpload({ useTempFiles: true }));
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
 
 
 app.get("/", (req, res) => {
