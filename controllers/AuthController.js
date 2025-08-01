@@ -456,7 +456,10 @@ const HandleUpdateProfile = async (req, res, next) => {
     }) : '';
 
     const updatedFields = {};
-    updatedFields.profilePicture = uploadResult.secure_url;
+
+    if (profilePicture) {
+      updatedFields.profilePicture = uploadResult.secure_url;
+    }
 
     if (oldPassword && !newPassword) {
       return res.status(400).json({ message: "new password is required when you enter old password" });
