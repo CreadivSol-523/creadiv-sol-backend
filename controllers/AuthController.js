@@ -20,9 +20,9 @@ const register = async (req, res, next) => {
     const { username, email, phone, password, deviceId, role } = req.body;
 
     const existingUser = (await UserModel.findOne({
-      $or: [{ username }, { email }],
+      email,
     })) || (await AdminModel.findOne({
-      $or: [{ username }, { email }],
+      email,
     }));
     if (existingUser) {
       return res
@@ -134,9 +134,9 @@ const login = async (req, res, next) => {
     const { identifier, password, deviceId } = req.body;
 
     const user = (await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     })) || (await AdminModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     }));
 
     if (!user) {
@@ -243,9 +243,9 @@ const forgetPassword = async (req, res, next) => {
   try {
     const { identifier } = req.body;
     const user = (await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     })) || (await AdminModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     }));
 
     if (!user) {
@@ -338,13 +338,13 @@ const verifyOtp = async (req, res, next) => {
       await OtpVerificationModel.findOneAndDelete({ identifier: identifier })
 
       return res.status(200).json({ accessToken, refreshToken, user: newUser });
-      
+
     } else if (type === "otp") {
 
       const user = (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        email: identifier
       })) || (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        email: identifier
       }));
 
       if (!user) {
@@ -377,7 +377,7 @@ const changePassword = async (req, res, next) => {
   try {
     const { identifier, otp, newPassword } = req.body;
     const user = await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier,
     });
 
     if (!user) {

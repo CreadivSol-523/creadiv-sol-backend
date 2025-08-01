@@ -29,7 +29,7 @@ const handleRealtimeCounter = async (req, res, next) => {
 const handleGetRealtimeCounter = async (req, res, next) => {
     try {
         const getCounter = await RealtimeCounterModel.find();
-        res.status(200).json({ seq: getCounter[0].seq })
+        res.status(200).json({ seq: getCounter[0].seq || [] })
     } catch (error) {
         console.log("")
         next(error);
