@@ -453,7 +453,7 @@ const HandleUpdateProfile = async (req, res, next) => {
       req?.files?.profilePicture?.[0];
 
     const updatedFields = {};
-
+console.log(profilePicture,req.body)
     if (profilePicture) {
       updatedFields.profilePicture = ExtractRelativeFilePath(profilePicture);
     }
