@@ -5,7 +5,6 @@ const UserSchema = new Schema(
   {
     username: {
       type: String,
-      unique: true,
     },
     phone: {
       type: String,
@@ -41,7 +40,7 @@ const UserSchema = new Schema(
     },
     profilePicture: {
       type: String,
-      default: "uploads/placeholder-profile.png"
+      default: "https://res.cloudinary.com/djnsp1p8r/image/upload/v1754084452/placeholder-profile_girwxh.png"
     }
   },
   { timestamps: true }

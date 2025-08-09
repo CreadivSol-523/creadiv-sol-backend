@@ -17,13 +17,15 @@ import AuthRoutes from "./routes/AuthRoutes.js";
 import CounterRoutes from "./routes/CounterRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
+// Cloudinary
+import { v2 as cloudinary } from "cloudinary";
+import fileUpload from "express-fileupload";
 
 dotenv.config();
 
 const app = express();
 
-
-app.use(SecurityHeaders);
+// app.use(SecurityHeaders);
 
 // === MongoDB Connection ===
 connectDB();
@@ -40,23 +42,22 @@ app.use(
   })
 );
 
-// === Security Header Middleware ===
-app.use(
-  "/uploads",
-  (req, res, next) => {
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-    }
-    res.header("Access-Control-Allow-Methods", "GET");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept"
-    );
-    next();
-  },
-  express.static("uploads")
-);
+// === Cloudinary Configuration ===
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_Cloud,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  api_key: process.env.CLOUDINARY_API_KEY
+})
+
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
+
+
+app.get("/", (req, res) => {
+  res.status(200).json({ heath: "Ok" });
+});
 
 // === Rate Limiter
 app.use(RateLimiter);
