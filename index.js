@@ -25,7 +25,7 @@ dotenv.config();
 
 const app = express();
 
-app.use(SecurityHeaders);
+// app.use(SecurityHeaders);
 
 // === MongoDB Connection ===
 connectDB();
@@ -49,25 +49,11 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY
 })
 
-app.use(fileUpload({ useTempFiles: true }));
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
 
-// === Security Header Middleware ===
-app.use(
-  "/uploads",
-  (req, res, next) => {
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-    }
-    res.header("Access-Control-Allow-Methods", "GET");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept"
-    );
-    next();
-  },
-  express.static("uploads")
-);
 
 app.get("/", (req, res) => {
   res.status(200).json({ heath: "Ok" });

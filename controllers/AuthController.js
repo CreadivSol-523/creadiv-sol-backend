@@ -448,7 +448,6 @@ const HandleUpdateProfile = async (req, res, next) => {
 
     const { oldPassword, newPassword } = req.body;
 
-
     const profilePicture = req?.files?.profilePicture;
     const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
       resource_type: 'image',
@@ -457,8 +456,19 @@ const HandleUpdateProfile = async (req, res, next) => {
 
     const updatedFields = {};
 
+    const { country, city, username } = req.body;
+
     if (profilePicture) {
       updatedFields.profilePicture = uploadResult.secure_url;
+    }
+    if (country) {
+      updatedFields.country = country;
+    }
+    if (city) {
+      updatedFields.city = city;
+    }
+    if (username) {
+      updatedFields.username = username;
     }
 
     if (oldPassword && !newPassword) {

@@ -14,6 +14,14 @@ const UserSchema = new Schema(
       type: String,
       unique: true,
     },
+    country: {
+      type: String,
+      default: '',
+    },
+    city: {
+      type: String,
+      default: '',
+    },
     password: String,
     role: {
       type: String,
