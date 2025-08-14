@@ -12,6 +12,7 @@ import AdminModel from "../models/AdminSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import OtpVerificationModel from "../models/UserOtpVerification.js";
 import { v2 as cloudinary } from "cloudinary";
+import SendGridMailer from "../utils/SendGridMailer.js";
 
 // REGISTER
 // METHOD : POST
@@ -76,11 +77,17 @@ const register = async (req, res, next) => {
       const otp = generateOTP();
       const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      autoMailer({
+      // autoMailer({
+      //   to: email,
+      //   subject: "Password Reset OTP",
+      //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      // });
+
+      SendGridMailer({
         to: email,
         subject: "Password Reset OTP",
-        message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-      });
+        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      })
 
       const createUserOtp = new OtpVerificationModel({
         identifier: email,
@@ -259,11 +266,17 @@ const forgetPassword = async (req, res, next) => {
     user.otpExpire = otpExpire;
     await user.save();
 
-    autoMailer({
-      to: user.email,
+    // autoMailer({
+    //   to: user.email,
+    //   subject: "Password Reset OTP",
+    //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    // });
+
+    SendGridMailer({
+      to: email,
       subject: "Password Reset OTP",
-      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-    });
+      html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+    })
 
     res.status(200).json({ message: "OTP sent to your email.", identifier });
   } catch (err) {
