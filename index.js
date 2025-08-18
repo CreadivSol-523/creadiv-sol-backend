@@ -68,7 +68,7 @@ app.use(ErrorLogger);
 
 // === Routes ===
 app.use("/api", AuthRoutes);
-app.use("/api", NewsUpdateRoutes);
+app.use("/api/news", NewsUpdateRoutes);
 app.use("/api/counter", CounterRoutes);
 
 // === Error Handler
