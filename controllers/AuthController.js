@@ -11,6 +11,8 @@ import mongoose from "mongoose";
 import AdminModel from "../models/AdminSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import OtpVerificationModel from "../models/UserOtpVerification.js";
+import { v2 as cloudinary } from "cloudinary";
+import SendGridMailer from "../utils/SendGridMailer.js";
 
 // REGISTER
 // METHOD : POST
@@ -20,9 +22,9 @@ const register = async (req, res, next) => {
     const { username, email, phone, password, deviceId, role } = req.body;
 
     const existingUser = (await UserModel.findOne({
-      $or: [{ username }, { email }],
+      email,
     })) || (await AdminModel.findOne({
-      $or: [{ username }, { email }],
+      email,
     }));
     if (existingUser) {
       return res
@@ -75,11 +77,17 @@ const register = async (req, res, next) => {
       const otp = generateOTP();
       const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      autoMailer({
+      // autoMailer({
+      //   to: email,
+      //   subject: "Password Reset OTP",
+      //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      // });
+
+      SendGridMailer({
         to: email,
         subject: "Password Reset OTP",
-        message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-      });
+        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      })
 
       const createUserOtp = new OtpVerificationModel({
         identifier: email,
@@ -134,9 +142,9 @@ const login = async (req, res, next) => {
     const { identifier, password, deviceId } = req.body;
 
     const user = (await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     })) || (await AdminModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     }));
 
     if (!user) {
@@ -243,9 +251,9 @@ const forgetPassword = async (req, res, next) => {
   try {
     const { identifier } = req.body;
     const user = (await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     })) || (await AdminModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier
     }));
 
     if (!user) {
@@ -258,11 +266,17 @@ const forgetPassword = async (req, res, next) => {
     user.otpExpire = otpExpire;
     await user.save();
 
-    autoMailer({
-      to: user.email,
+    // autoMailer({
+    //   to: user.email,
+    //   subject: "Password Reset OTP",
+    //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    // });
+
+    SendGridMailer({
+      to: email,
       subject: "Password Reset OTP",
-      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-    });
+      html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+    })
 
     res.status(200).json({ message: "OTP sent to your email.", identifier });
   } catch (err) {
@@ -338,13 +352,13 @@ const verifyOtp = async (req, res, next) => {
       await OtpVerificationModel.findOneAndDelete({ identifier: identifier })
 
       return res.status(200).json({ accessToken, refreshToken, user: newUser });
-      
+
     } else if (type === "otp") {
 
       const user = (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        email: identifier
       })) || (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        email: identifier
       }));
 
       if (!user) {
@@ -377,7 +391,7 @@ const changePassword = async (req, res, next) => {
   try {
     const { identifier, otp, newPassword } = req.body;
     const user = await UserModel.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      email: identifier,
     });
 
     if (!user) {
@@ -447,15 +461,30 @@ const HandleUpdateProfile = async (req, res, next) => {
 
     const { oldPassword, newPassword } = req.body;
 
-    const profilePicture =
-      req?.files &&
-      req.files.profilePicture &&
-      req?.files?.profilePicture?.[0];
+    const profilePicture = req?.files?.profilePicture;
+    const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
+      resource_type: 'image',
+      folder: `profiles`,
+    }) : '';
 
     const updatedFields = {};
 
+    const { country, city, username, phone } = req.body;
+
     if (profilePicture) {
-      updatedFields.profilePicture = ExtractRelativeFilePath(profilePicture);
+      updatedFields.profilePicture = uploadResult.secure_url;
+    }
+    if (country) {
+      updatedFields.country = country;
+    }
+    if (city) {
+      updatedFields.city = city;
+    }
+    if (username) {
+      updatedFields.username = username;
+    }
+    if (phone) {
+      updatedFields.phone = phone;
     }
 
     if (oldPassword && !newPassword) {
