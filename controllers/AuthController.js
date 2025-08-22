@@ -21,6 +21,11 @@ const register = async (req, res, next) => {
   try {
     const { username, email, phone, password, deviceId, role } = req.body;
 
+    const findOtp = await OtpVerificationModel.findOne({ identifier: email })
+    if (findOtp) {
+      await OtpVerificationModel.findOneAndDelete({ identifier: email })
+    }
+
     const existingUser = (await UserModel.findOne({
       email,
     })) || (await AdminModel.findOne({
@@ -31,6 +36,7 @@ const register = async (req, res, next) => {
         .status(400)
         .json({ message: "Username or email already taken" });
     }
+
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -48,6 +54,9 @@ const register = async (req, res, next) => {
       });
 
       await newUser.save();
+
+
+
 
       // Generate tokens
       const accessToken = generateAccessToken(newUser);

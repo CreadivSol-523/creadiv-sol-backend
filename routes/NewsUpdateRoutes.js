@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.post("/add-news", AuthMiddleware, AccessMiddleware(["Admin"]), handleAddNews);
 
-router.get("/get-news", AuthMiddleware, AccessMiddleware(["Admin"]), handleGetNews);
+router.get("/get-news", AuthMiddleware, handleGetNews);
 
 router.patch("/:adminID/update-news/:newsID", AuthMiddleware, AccessMiddleware(["Admin"]), handleUpdateNews);
 
