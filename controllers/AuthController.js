@@ -94,8 +94,8 @@ const register = async (req, res, next) => {
 
       SendGridMailer({
         to: email,
-        subject: "Password Reset OTP",
-        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+        subject: "Email Verification OTP",
+        html: `<p>Your OTP for email verification is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
       })
 
       const createUserOtp = new OtpVerificationModel({
@@ -105,32 +105,6 @@ const register = async (req, res, next) => {
       })
 
       await createUserOtp.save();
-
-
-      // const newUser = new UserModel({
-      //   username,
-      //   email,
-      //   phone,
-      //   password: hashedPassword,
-      // });
-
-      // await newUser.save();
-
-      // Generate tokens
-      // const accessToken = generateAccessToken(newUser);
-      // const refreshToken = generateRefreshToken(newUser, deviceId || "Web");
-      // newUser.refreshTokens.push({
-      //   token: refreshToken,
-      //   deviceId: deviceId || "Web",
-      // });
-      // await newUser.save();
-
-      // const userDetails = {
-      //   username: newUser.username,
-      //   email: newUser.email,
-      //   role: newUser.role,
-      //   _id: newUser._id,
-      // };
 
       res.status(201).json({
         message: "Otp sent to your email",
@@ -258,36 +232,59 @@ const logout = async (req, res) => {
 // ENDPOINT: /api/forget-password
 const forgetPassword = async (req, res, next) => {
   try {
-    const { identifier } = req.body;
-    const user = (await UserModel.findOne({
-      email: identifier
-    })) || (await AdminModel.findOne({
-      email: identifier
-    }));
+    const { identifier, type } = req.body;
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!type || type === "") {
+      return res.status(400).json({ message: "Type Field is required" })
     }
 
     const otp = generateOTP();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    user.otp = otp;
-    user.otpExpire = otpExpire;
-    await user.save();
 
-    // autoMailer({
-    //   to: user.email,
-    //   subject: "Password Reset OTP",
-    //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-    // });
+    if (type === "signup") {
+      const findOtp = await OtpVerificationModel.findOne({ identifier: identifier })
+      if (findOtp) {
+        await OtpVerificationModel.findOneAndDelete({ identifier: identifier })
+      }
+      const createUserOtp = new OtpVerificationModel({
+        identifier: identifier,
+        otp: otp,
+        otpExpire: otpExpire
+      })
+      await createUserOtp.save();
 
-    SendGridMailer({
-      to: identifier,
-      subject: "Password Reset OTP",
-      html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
-    })
+      SendGridMailer({
+        to: identifier,
+        subject: "Email Verification OTP",
+        html: `<p>Your OTP for email verification is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      })
+      res.status(200).json({ message: "OTP sent to your email.", identifier });
 
-    res.status(200).json({ message: "OTP sent to your email.", identifier });
+
+    } else if (type === "otp") {
+      const user = (await UserModel.findOne({
+        email: identifier
+      })) || (await AdminModel.findOne({
+        email: identifier
+      }));
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      user.otp = otp;
+      user.otpExpire = otpExpire;
+      await user.save();
+
+      SendGridMailer({
+        to: identifier,
+        subject: "Password Reset OTP",
+        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      })
+
+      res.status(200).json({ message: "OTP sent to your email.", identifier });
+    }
+
+
   } catch (err) {
     next(err);
   }
