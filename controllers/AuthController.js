@@ -233,7 +233,7 @@ const logout = async (req, res) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user = await UserModel.findById(decoded.id);
+    const user = (await UserModel.findById(decoded.id)) || (await AdminModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
