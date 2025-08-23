@@ -15,6 +15,7 @@ import connectDB from "./config/DB.js";
 // Routes
 import AuthRoutes from "./routes/AuthRoutes.js";
 import CounterRoutes from "./routes/CounterRoutes.js";
+import NewsUpdateRoutes from "./routes/NewsUpdateRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
 // Cloudinary
@@ -67,6 +68,7 @@ app.use(ErrorLogger);
 
 // === Routes ===
 app.use("/api", AuthRoutes);
+app.use("/api/news", NewsUpdateRoutes);
 app.use("/api/counter", CounterRoutes);
 
 // === Error Handler

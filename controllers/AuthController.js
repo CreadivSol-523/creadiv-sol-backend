@@ -12,6 +12,7 @@ import AdminModel from "../models/AdminSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import OtpVerificationModel from "../models/UserOtpVerification.js";
 import { v2 as cloudinary } from "cloudinary";
+import SendGridMailer from "../utils/SendGridMailer.js";
 
 // REGISTER
 // METHOD : POST
@@ -19,6 +20,11 @@ import { v2 as cloudinary } from "cloudinary";
 const register = async (req, res, next) => {
   try {
     const { username, email, phone, password, deviceId, role } = req.body;
+
+    const findOtp = await OtpVerificationModel.findOne({ identifier: email })
+    if (findOtp) {
+      await OtpVerificationModel.findOneAndDelete({ identifier: email })
+    }
 
     const existingUser = (await UserModel.findOne({
       email,
@@ -30,6 +36,7 @@ const register = async (req, res, next) => {
         .status(400)
         .json({ message: "Username or email already taken" });
     }
+
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -47,6 +54,9 @@ const register = async (req, res, next) => {
       });
 
       await newUser.save();
+
+
+
 
       // Generate tokens
       const accessToken = generateAccessToken(newUser);
@@ -76,11 +86,17 @@ const register = async (req, res, next) => {
       const otp = generateOTP();
       const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      autoMailer({
+      // autoMailer({
+      //   to: email,
+      //   subject: "Password Reset OTP",
+      //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      // });
+
+      SendGridMailer({
         to: email,
         subject: "Password Reset OTP",
-        message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-      });
+        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      })
 
       const createUserOtp = new OtpVerificationModel({
         identifier: email,
@@ -259,11 +275,17 @@ const forgetPassword = async (req, res, next) => {
     user.otpExpire = otpExpire;
     await user.save();
 
-    autoMailer({
-      to: user.email,
+    // autoMailer({
+    //   to: user.email,
+    //   subject: "Password Reset OTP",
+    //   message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+    // });
+
+    SendGridMailer({
+      to: email,
       subject: "Password Reset OTP",
-      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
-    });
+      html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+    })
 
     res.status(200).json({ message: "OTP sent to your email.", identifier });
   } catch (err) {
@@ -448,7 +470,6 @@ const HandleUpdateProfile = async (req, res, next) => {
 
     const { oldPassword, newPassword } = req.body;
 
-
     const profilePicture = req?.files?.profilePicture;
     const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
       resource_type: 'image',
@@ -456,9 +477,23 @@ const HandleUpdateProfile = async (req, res, next) => {
     }) : '';
 
     const updatedFields = {};
-console.log(profilePicture,req.body)
+
+    const { country, city, username, phone } = req.body;
+
     if (profilePicture) {
       updatedFields.profilePicture = uploadResult.secure_url;
+    }
+    if (country) {
+      updatedFields.country = country;
+    }
+    if (city) {
+      updatedFields.city = city;
+    }
+    if (username) {
+      updatedFields.username = username;
+    }
+    if (phone) {
+      updatedFields.phone = phone;
     }
 
     if (oldPassword && !newPassword) {
