@@ -282,7 +282,7 @@ const forgetPassword = async (req, res, next) => {
     // });
 
     SendGridMailer({
-      to: email,
+      to: identifier,
       subject: "Password Reset OTP",
       html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
     })
