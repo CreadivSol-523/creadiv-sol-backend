@@ -84,8 +84,8 @@ const handleGetNews = async (req, res, next) => {
         video: 1,
         content: 1,
         admin: {
-          officeID: "$adminDetails._id",
-          officeName: "$adminDetails.username",
+          _id: "$adminDetails._id",
+          username: "$adminDetails.username",
           profilePicture: "$adminDetails.profilePicture",
         }
       },
