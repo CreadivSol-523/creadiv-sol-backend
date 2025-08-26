@@ -1,10 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  generateOTP,
-} from "../utils/TokenGenerator.js";
+import { generateAccessToken, generateRefreshToken, generateOTP } from "../utils/TokenGenerator.js";
 import UserModel from "../models/UserSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
@@ -13,6 +9,7 @@ import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import OtpVerificationModel from "../models/UserOtpVerification.js";
 import { v2 as cloudinary } from "cloudinary";
 import SendGridMailer from "../utils/SendGridMailer.js";
+import SearchQuery from "../utils/SearchQuery.js";
 
 // REGISTER
 // METHOD : POST
@@ -21,30 +18,28 @@ const register = async (req, res, next) => {
   try {
     const { username, email, phone, password, deviceId, role } = req.body;
 
-    const findOtp = await OtpVerificationModel.findOne({ identifier: email })
+    const findOtp = await OtpVerificationModel.findOne({ identifier: email });
     if (findOtp) {
-      await OtpVerificationModel.findOneAndDelete({ identifier: email })
+      await OtpVerificationModel.findOneAndDelete({ identifier: email });
     }
 
-    const existingUser = (await UserModel.findOne({
-      email,
-    })) || (await AdminModel.findOne({
-      email,
-    }));
+    const existingUser =
+      (await UserModel.findOne({
+        email,
+      })) ||
+      (await AdminModel.findOne({
+        email,
+      }));
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "Username or email already taken" });
+      return res.status(400).json({ message: "Username or email already taken" });
     }
-
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     if (role === "Admin") {
-
       const validateAdmin = await AdminModel.find();
       if (validateAdmin.length !== 0) {
-        return res.status(400).json({ message: "There can only be one admin" })
+        return res.status(400).json({ message: "There can only be one admin" });
       }
       const newUser = new AdminModel({
         username,
@@ -54,9 +49,6 @@ const register = async (req, res, next) => {
       });
 
       await newUser.save();
-
-
-
 
       // Generate tokens
       const accessToken = generateAccessToken(newUser);
@@ -82,7 +74,6 @@ const register = async (req, res, next) => {
         user: userDetails,
       });
     } else if (role === "User") {
-
       const otp = generateOTP();
       const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -95,14 +86,14 @@ const register = async (req, res, next) => {
       SendGridMailer({
         to: email,
         subject: "Email Verification OTP",
-        html: `<p>Your OTP for email verification is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
-      })
+        html: `<p>Your OTP for email verification is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      });
 
       const createUserOtp = new OtpVerificationModel({
         identifier: email,
         otp: otp,
-        otpExpire: otpExpire
-      })
+        otpExpire: otpExpire,
+      });
 
       await createUserOtp.save();
 
@@ -110,8 +101,6 @@ const register = async (req, res, next) => {
         message: "Otp sent to your email",
       });
     }
-
-
   } catch (err) {
     next(err);
   }
@@ -124,11 +113,13 @@ const login = async (req, res, next) => {
   try {
     const { identifier, password, deviceId } = req.body;
 
-    const user = (await UserModel.findOne({
-      email: identifier
-    })) || (await AdminModel.findOne({
-      email: identifier
-    }));
+    const user =
+      (await UserModel.findOne({
+        email: identifier,
+      })) ||
+      (await AdminModel.findOne({
+        email: identifier,
+      }));
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -142,9 +133,7 @@ const login = async (req, res, next) => {
     const accessToken = generateAccessToken(user, deviceId);
     const refreshToken = generateRefreshToken(user, deviceId);
 
-    user.refreshTokens = user.refreshTokens.filter(
-      (entry) => entry.deviceId !== deviceId
-    );
+    user.refreshTokens = user.refreshTokens.filter((entry) => entry.deviceId !== deviceId);
 
     user.refreshTokens.push({
       token: refreshToken,
@@ -177,9 +166,7 @@ const refreshToken = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const matchToken = user.refreshTokens.find(
-      (entry) => entry.token === token
-    );
+    const matchToken = user.refreshTokens.find((entry) => entry.token === token);
 
     if (!matchToken) {
       return res.status(403).json({ message: "Invalid refresh token" });
@@ -192,7 +179,6 @@ const refreshToken = async (req, res) => {
     res.status(403).json({ message: "Invalid refresh token" });
   }
 };
-
 
 // LOGOUT (Invalidate refresh token)
 // METHOD : POST
@@ -214,9 +200,7 @@ const logout = async (req, res) => {
     }
 
     // ✅ Remove the matching refresh token by token and optionally deviceId
-    user.refreshTokens = user.refreshTokens.filter(
-      (entry) => entry.token !== token && (!deviceId || entry.deviceId !== deviceId)
-    );
+    user.refreshTokens = user.refreshTokens.filter((entry) => entry.token !== token && (!deviceId || entry.deviceId !== deviceId));
 
     await user.save();
 
@@ -226,7 +210,6 @@ const logout = async (req, res) => {
   }
 };
 
-
 // FORGET PASSWORD
 // METHOD: POST
 // ENDPOINT: /api/forget-password
@@ -235,38 +218,38 @@ const forgetPassword = async (req, res, next) => {
     const { identifier, type } = req.body;
 
     if (!type || type === "") {
-      return res.status(400).json({ message: "Type Field is required" })
+      return res.status(400).json({ message: "Type Field is required" });
     }
 
     const otp = generateOTP();
     const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     if (type === "signup") {
-      const findOtp = await OtpVerificationModel.findOne({ identifier: identifier })
+      const findOtp = await OtpVerificationModel.findOne({ identifier: identifier });
       if (findOtp) {
-        await OtpVerificationModel.findOneAndDelete({ identifier: identifier })
+        await OtpVerificationModel.findOneAndDelete({ identifier: identifier });
       }
       const createUserOtp = new OtpVerificationModel({
         identifier: identifier,
         otp: otp,
-        otpExpire: otpExpire
-      })
+        otpExpire: otpExpire,
+      });
       await createUserOtp.save();
 
       SendGridMailer({
         to: identifier,
         subject: "Email Verification OTP",
-        html: `<p>Your OTP for email verification is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
-      })
+        html: `<p>Your OTP for email verification is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      });
       res.status(200).json({ message: "OTP sent to your email.", identifier });
-
-
     } else if (type === "otp") {
-      const user = (await UserModel.findOne({
-        email: identifier
-      })) || (await AdminModel.findOne({
-        email: identifier
-      }));
+      const user =
+        (await UserModel.findOne({
+          email: identifier,
+        })) ||
+        (await AdminModel.findOne({
+          email: identifier,
+        }));
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -278,13 +261,11 @@ const forgetPassword = async (req, res, next) => {
       SendGridMailer({
         to: identifier,
         subject: "Password Reset OTP",
-        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
-      })
+        html: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      });
 
       res.status(200).json({ message: "OTP sent to your email.", identifier });
     }
-
-
   } catch (err) {
     next(err);
   }
@@ -298,11 +279,10 @@ const verifyOtp = async (req, res, next) => {
     const { identifier, otp, type } = req.body;
 
     if (!type || type === "") {
-      return res.status(400).json({ message: "Type Field is required" })
+      return res.status(400).json({ message: "Type Field is required" });
     }
 
     if (type === "signup") {
-
       const { username, email, phone, password, deviceId } = req.body;
 
       if (!username || !email || !phone || !password || !deviceId) {
@@ -310,10 +290,10 @@ const verifyOtp = async (req, res, next) => {
       }
 
       if (username === "" || email === "" || phone === "" || password === "" || deviceId === "") {
-        return res.status(400).json({ message: "Please fill all the required fields" })
+        return res.status(400).json({ message: "Please fill all the required fields" });
       }
 
-      const findOtp = await OtpVerificationModel.findOne({ identifier: identifier })
+      const findOtp = await OtpVerificationModel.findOne({ identifier: identifier });
       if (!findOtp) {
         return res.status(404).json({ message: "Otp not found" });
       }
@@ -334,7 +314,7 @@ const verifyOtp = async (req, res, next) => {
         email,
         phone,
         password: hashedPassword,
-        role: "User"
+        role: "User",
       });
 
       await newUser.save();
@@ -355,17 +335,17 @@ const verifyOtp = async (req, res, next) => {
         _id: newUser._id,
       };
 
-      await OtpVerificationModel.findOneAndDelete({ identifier: identifier })
+      await OtpVerificationModel.findOneAndDelete({ identifier: identifier });
 
       return res.status(200).json({ accessToken, refreshToken, user: newUser });
-
     } else if (type === "otp") {
-
-      const user = (await UserModel.findOne({
-        email: identifier
-      })) || (await AdminModel.findOne({
-        email: identifier
-      }));
+      const user =
+        (await UserModel.findOne({
+          email: identifier,
+        })) ||
+        (await AdminModel.findOne({
+          email: identifier,
+        }));
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -383,8 +363,6 @@ const verifyOtp = async (req, res, next) => {
     } else {
       res.status(400).json({ message: "Invalid Request" });
     }
-
-
   } catch (err) {
     next(err);
   }
@@ -422,29 +400,25 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-
 // GET PROFILE
 // METHOD: GET
 // ENDPOINT: /api/profile/:id
 const HandleGetProfile = async (req, res, next) => {
   try {
-
     const { id } = req.params;
 
-    const user = await UserModel.findById(id)
+    const user = (await UserModel.findById(id)) || (await AdminModel.findById(id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ profile: user })
-
+    res.status(200).json({ profile: user });
   } catch (error) {
-    console.log(error)
-    next(error)
+    console.log(error);
+    next(error);
   }
-}
-
+};
 
 // UPDATE PROFILE
 // METHOD: PATCH
@@ -468,10 +442,12 @@ const HandleUpdateProfile = async (req, res, next) => {
     const { oldPassword, newPassword } = req.body;
 
     const profilePicture = req?.files?.profilePicture;
-    const uploadResult = profilePicture ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
-      resource_type: 'image',
-      folder: `profiles`,
-    }) : '';
+    const uploadResult = profilePicture
+      ? await cloudinary.uploader.upload(profilePicture.tempFilePath, {
+          resource_type: "image",
+          folder: `profiles`,
+        })
+      : "";
 
     const updatedFields = {};
 
@@ -519,16 +495,36 @@ const HandleUpdateProfile = async (req, res, next) => {
   }
 };
 
+const handleGetUser = async (req, res, next) => {
+  try {
+    const search = req.query.search || {};
 
+    const matchStage = SearchQuery(search);
+    const pipeline = [];
 
-export {
-  register,
-  login,
-  logout,
-  refreshToken,
-  forgetPassword,
-  verifyOtp,
-  changePassword,
-  HandleGetProfile,
-  HandleUpdateProfile
+    if (matchStage) pipeline.push(matchStage);
+
+    pipeline.push({
+      $project: {
+        _id: 1,
+        username: 1,
+        phone: 1,
+        email: 1,
+        country: 1,
+        city: 1,
+        createdAt: 1,
+      },
+    });
+
+    pipeline.push({ $sort: { createdAt: -1 } });
+
+    const users = await UserModel.aggregate(pipeline);
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
 };
+
+export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleGetProfile, HandleUpdateProfile, handleGetUser };

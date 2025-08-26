@@ -1,21 +1,7 @@
 import express from "express";
-import {
-  login,
-  logout,
-  refreshToken,
-  register,
-  forgetPassword,
-  verifyOtp,
-  changePassword,
-  HandleGetProfile,
-  HandleUpdateProfile,
-} from "../controllers/AuthController.js";
+import { login, logout, refreshToken, register, forgetPassword, verifyOtp, changePassword, HandleGetProfile, HandleUpdateProfile, handleGetUser } from "../controllers/AuthController.js";
 import validate from "../middlewares/ValidationHandler.js";
-import {
-  loginSchema,
-  adminSchema,
-  userSchema,
-} from "../validations/AuthValidations.js";
+import { loginSchema, adminSchema, userSchema } from "../validations/AuthValidations.js";
 import AuthMiddleware from "../middlewares/AuthMiddleware.js";
 import AccessMiddleware from "../middlewares/AccessMiddleware.js";
 import { CreateUploadMiddleware } from "../middlewares/MulterMiddleware.js";
@@ -36,11 +22,10 @@ router.patch("/verify-otp", verifyOtp);
 
 router.patch("/change-password", changePassword);
 
-router.get("/profile/:id", HandleGetProfile)
+router.get("/profile/:id", HandleGetProfile);
 
-router.patch("/update-profile/:id",
-  AuthMiddleware,
-  AccessMiddleware(["Admin", "User"]),
-  HandleUpdateProfile)
+router.patch("/update-profile/:id", AuthMiddleware, AccessMiddleware(["Admin", "User"]), HandleUpdateProfile);
+
+router.get("/get-users", handleGetUser);
 
 export default router;

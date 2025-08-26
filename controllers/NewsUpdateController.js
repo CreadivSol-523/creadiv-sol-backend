@@ -1,8 +1,7 @@
-import AdminModel from "../models/AdminSchema.js"
+import AdminModel from "../models/AdminSchema.js";
 import { v2 as cloudinary } from "cloudinary";
 import NewsUpdateModel from "../models/NewsUpdateSchema.js";
-import SearchQuery from "../utils/SearchQuery.js"
-
+import SearchQuery from "../utils/SearchQuery.js";
 
 // ADD NEWS
 // METHOD : POST
@@ -18,6 +17,10 @@ const handleAddNews = async (req, res, next) => {
     let thumbnail = "";
     let video = "";
 
+    if (!content && !title) {
+      return res.status(400).json({ message: "Title and Content are required" });
+    }
+
     if (upload) {
       const uploadResult = await cloudinary.uploader.upload(upload.tempFilePath, {
         resource_type: "auto",
@@ -28,9 +31,8 @@ const handleAddNews = async (req, res, next) => {
       } else if (uploadResult.resource_type === "video") {
         video = uploadResult.secure_url;
       }
-    } else {
-      return res.status(400).json({ message: "Image or Video is required" })
     }
+
     const createNews = new NewsUpdateModel({
       createdBy: adminID,
       title,
@@ -49,7 +51,6 @@ const handleAddNews = async (req, res, next) => {
     next(error);
   }
 };
-
 
 // GET NEWS
 // METHOD : GET
@@ -73,7 +74,7 @@ const handleGetNews = async (req, res, next) => {
     });
 
     pipeline.push({
-      $unwind: { path: "$adminDetails", preserveNullAndEmptyArrays: true }
+      $unwind: { path: "$adminDetails", preserveNullAndEmptyArrays: true },
     });
 
     pipeline.push({
@@ -84,10 +85,10 @@ const handleGetNews = async (req, res, next) => {
         video: 1,
         content: 1,
         admin: {
-          officeID: "$adminDetails._id",
-          officeName: "$adminDetails.username",
+          _id: "$adminDetails._id",
+          username: "$adminDetails.username",
           profilePicture: "$adminDetails.profilePicture",
-        }
+        },
       },
     });
 
@@ -96,13 +97,11 @@ const handleGetNews = async (req, res, next) => {
     const news = await NewsUpdateModel.aggregate(pipeline);
 
     res.status(200).json(news);
-
   } catch (error) {
     console.log(error);
     next(error);
   }
 };
-
 
 // UPDATE NEWS
 // METHOD : GET
@@ -153,7 +152,5 @@ const handleUpdateNews = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 export { handleAddNews, handleGetNews, handleUpdateNews };
