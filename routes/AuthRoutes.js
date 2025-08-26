@@ -26,6 +26,6 @@ router.get("/profile/:id", HandleGetProfile);
 
 router.patch("/update-profile/:id", AuthMiddleware, AccessMiddleware(["Admin", "User"]), HandleUpdateProfile);
 
-router.get("/get-users", handleGetUser);
+router.get("/get-users", AuthMiddleware, AccessMiddleware(["Admin"]), handleGetUser);
 
 export default router;
