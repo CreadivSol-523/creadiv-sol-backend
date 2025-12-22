@@ -15,3 +15,20 @@ Stack: SyntaxError: Expected double-quoted property name in JSON at position 41
     at endReadableNT (node:internal/streams/readable:1696:12)
     at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
 
+
+[2025-12-22T21:20:43.128Z]
+GET /api/get-portfolio
+Status: 500
+Message: SearchQuery is not defined
+Stack: ReferenceError: SearchQuery is not defined
+    at handleGetPortfolio (file:///F:/creadiv-sol-backend/controllers/PortfolioController.js:80:28)
+    at Layer.handle [as handle_request] (F:\creadiv-sol-backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (F:\creadiv-sol-backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (F:\creadiv-sol-backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (F:\creadiv-sol-backend\node_modules\express\lib\router\layer.js:95:5)
+    at F:\creadiv-sol-backend\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (F:\creadiv-sol-backend\node_modules\express\lib\router\index.js:346:12)
+    at next (F:\creadiv-sol-backend\node_modules\express\lib\router\index.js:280:10)
+    at Function.handle (F:\creadiv-sol-backend\node_modules\express\lib\router\index.js:175:3)
+    at router (F:\creadiv-sol-backend\node_modules\express\lib\router\index.js:47:12)
+

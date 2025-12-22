@@ -13,9 +13,7 @@ import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 import connectDB from "./config/DB.js";
 
 // Routes
-import AuthRoutes from "./routes/AuthRoutes.js";
-import CounterRoutes from "./routes/CounterRoutes.js";
-import NewsUpdateRoutes from "./routes/NewsUpdateRoutes.js";
+import PortfolioRoutes from "./routes/PortfolioRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
 // Cloudinary
@@ -31,30 +29,33 @@ const app = express();
 // === MongoDB Connection ===
 connectDB();
 
+app.use("/api", PortfolioRoutes);
+
 // === Global Middlewares ===
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
 app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ["POST", "GET", "PATCH", "DELETE"],
+    methods: ["POST", "GET", "PATCH", "DELETE"]
   })
 );
 
 // === Cloudinary Configuration ===
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_Cloud,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_secret: process.env.CLOUDINARY_API_SECRET,
   api_key: process.env.CLOUDINARY_API_KEY
-})
+});
 
-app.use(fileUpload({
-  useTempFiles: true,
-  tempFileDir: '/tmp/'
-}));
-
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "/tmp/"
+  })
+);
 
 app.get("/", (req, res) => {
   res.status(200).json({ heath: "Ok" });
@@ -67,9 +68,6 @@ app.use(RateLimiter);
 app.use(ErrorLogger);
 
 // === Routes ===
-app.use("/api", AuthRoutes);
-app.use("/api/news", NewsUpdateRoutes);
-app.use("/api/counter", CounterRoutes);
 
 // === Error Handler
 app.use(ErrorHandler);
