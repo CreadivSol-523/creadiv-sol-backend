@@ -29,12 +29,6 @@ const app = express();
 // === MongoDB Connection ===
 connectDB();
 
-app.use("/api", PortfolioRoutes);
-
-// === Global Middlewares ===
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
 app.use(
   cors({
     origin: allowedOrigins,
@@ -42,6 +36,12 @@ app.use(
     methods: ["POST", "GET", "PATCH", "DELETE"]
   })
 );
+
+app.use("/api", PortfolioRoutes);
+
+// === Global Middlewares ===
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
 // === Cloudinary Configuration ===
 cloudinary.config({
