@@ -1,5 +1,5 @@
 import express from "express";
-import { createPortfolio, handleGetPortfolio } from "../controllers/PortfolioController.js";
+import { createPortfolio, handleGetCategories, handleGetPortfolio } from "../controllers/PortfolioController.js";
 import upload from "../middlewares/upload.js";
 
 const router = express.Router();
@@ -13,5 +13,6 @@ router.post(
   createPortfolio
 );
 router.get("/get-portfolio", handleGetPortfolio);
+router.get("/get-categories", handleGetCategories);
 
 export default router;
