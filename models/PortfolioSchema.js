@@ -9,12 +9,6 @@ const PortfolioItemSchema = new Schema(
       trim: true
     },
 
-    slug: {
-      type: String,
-      required: true,
-      unique: true
-    },
-
     description: {
       type: String
     },
@@ -37,9 +31,15 @@ const PortfolioItemSchema = new Schema(
       required: true
     },
 
+    coverImagePublicId: {
+      type: String,
+      required: true
+    },
+
     gallery: [
       {
         src: String,
+        public_id: String,
         alt: String
       }
     ],
