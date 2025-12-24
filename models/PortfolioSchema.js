@@ -5,7 +5,6 @@ const PortfolioItemSchema = new Schema(
   {
     title: {
       type: String,
-      required: true,
       trim: true
     },
 
@@ -19,7 +18,9 @@ const PortfolioItemSchema = new Schema(
     },
 
     category: {
-      type: String
+      type: String,
+      required: true,
+
     },
 
     projectUrl: {
