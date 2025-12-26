@@ -1,15 +1,16 @@
 import nodemailer from 'nodemailer'
 
 let transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'smtp.hostinger.com',
     port: 465,
-    secure: true, 
+    secure: true,
     auth: {
-        user: 'skillstoretop01@gmail.com',
-        pass: 'khoz tjsj yuvk nhqs'
+        user: 'business@creadivsol.com',
+        pass: 'CreadivSol@001'
     },
     tls: { rejectUnauthorized: false }
 });
+
 
 
 export default transporter;

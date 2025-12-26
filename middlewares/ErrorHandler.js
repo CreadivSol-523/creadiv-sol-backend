@@ -1,61 +1,60 @@
-// const ErrorHandler = (err, req, res, next) => {
-//     let statusCode = err.status || 500;
-//     let message = err.message || 'Internal Server Error';
-
-//     // Handle Mongoose CastError
-//     if (err.name === 'CastError' && err.kind === 'ObjectId') {
-//         statusCode = 400;
-//         message = `Invalid ${err.path}: ${err.value}.`;
-//     }
-
-//     res.status(statusCode).json({
-//         status: 'error',
-//         statusCode,
-//         message,
-//         ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
-//     });
-// };
-
-// export default ErrorHandler;
-
 const ErrorHandler = (err, req, res, next) => {
   let statusCode = err.status || 500;
-  let message = err.message || 'Internal Server Error';
+  let message = err.message || "Internal Server Error";
 
-  // Handle Mongoose CastError (invalid ObjectId)
-  if (err.name === 'CastError' && err.kind === 'ObjectId') {
+  /* -------------------- Mongoose CastError -------------------- */
+  if (err.name === "CastError" && err.kind === "ObjectId") {
     statusCode = 400;
     message = `Invalid ${err.path}: ${err.value}.`;
   }
 
-  // Handle Mongo duplicate key error
-  // err.code 11000 is the duplicate key error code
-  else if (err.code === 11000) {
-    statusCode = 400; // Bad request, client sent duplicate data
+  /* -------------------- Mongoose ValidationError -------------------- */
+  else if (err.name === "ValidationError") {
+    statusCode = 400;
 
-    // Parse the duplicate key info from the error message or keyValue property
-    // Mongo error sometimes has err.keyValue object with duplicate fields
-    const duplicatedField = err.keyValue ? Object.keys(err.keyValue)[0] : null;
-    const duplicatedValue = err.keyValue ? err.keyValue[duplicatedField] : null;
+    // Collect all validation messages
+    const errors = Object.values(err.errors).map(e => ({
+      field: e.path,
+      message: e.message,
+    }));
+
+    return res.status(statusCode).json({
+      status: "error",
+      statusCode,
+      message: "Validation failed",
+      errors,
+    });
+  }
+
+  /* -------------------- Mongo Duplicate Key Error -------------------- */
+  else if (err.code === 11000) {
+    statusCode = 400;
+
+    const duplicatedField = err.keyValue
+      ? Object.keys(err.keyValue)[0]
+      : null;
+    const duplicatedValue = err.keyValue
+      ? err.keyValue[duplicatedField]
+      : null;
 
     if (duplicatedField && duplicatedValue) {
       message = `Duplicate value for field '${duplicatedField}': '${duplicatedValue}'. Please use a different value.`;
     } else {
-      // fallback if keyValue is not available, parse from err.message string
-      const matches = err.message.match(/index:\s+([a-zA-Z0-9_]+)_1 dup key: { :?"?([^ "}]+)"? }/);
-      if (matches && matches.length === 3) {
-        message = `Duplicate value for field '${matches[1]}': '${matches[2]}'. Please use a different value.`;
-      } else {
-        message = 'Duplicate key error.';
-      }
+      const matches = err.message.match(
+        /index:\s+([a-zA-Z0-9_]+)_1 dup key: { :?"?([^ "}]+)"? }/
+      );
+      message = matches
+        ? `Duplicate value for field '${matches[1]}': '${matches[2]}'. Please use a different value.`
+        : "Duplicate key error.";
     }
   }
 
+  /* -------------------- Default Error -------------------- */
   res.status(statusCode).json({
-    status: 'error',
+    status: "error",
     statusCode,
     message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
   });
 };
 
