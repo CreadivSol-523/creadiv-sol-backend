@@ -1,3 +1,4 @@
+import { sendTemplateEmail, sendThankYouContact } from "../emails/ContactUsEmail.js";
 import ContactUsModel from "../models/ContactUsSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 
@@ -28,48 +29,52 @@ export const createContactMessage = async (req, res, next) => {
         });
         await contact.save();
 
-        await autoMailer({
-            to: "steve@creadivsol.com",
-            subject: "New Contact Query",
-            message: `
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Phone:</strong> ${phone ? phone : "N/A"}</p>
-          <p><strong>Services:</strong> ${contact.services?.length
-                    ? contact.services.join(", ")
-                    : "N/A"
-                }</p>
-          <p><strong>Description:</strong> ${description || "N/A"}</p>
-        `,
-        });
 
-
-        await autoMailer({
-            to: "business@creadivsol.com",
-            subject: "New Contact Query",
-            message: `
-              <p><strong>Name:</strong> ${name}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Phone:</strong> ${phone ? phone : "N/A"}</p>
-              <p><strong>Services:</strong> ${contact.services?.length
-                    ? contact.services.join(", ")
-                    : "N/A"
-                }</p>
-              <p><strong>Description:</strong> ${description || "N/A"}</p>
-            `,
-        });
-
-        await autoMailer({
-            to: email,
-            subject: "Thank You For Connecting With CreadivSol",
-            message: `Please Wait Our Team Will Respond To You Within 24 hours`,
-        });
-
-        return res.status(201).json({
+        res.status(201).json({
             success: true,
             message: "Your message has been sent successfully",
             data: contact,
         });
+
+
+        await sendTemplateEmail({
+            to: "steve@creadivsol.com",
+            subject: "New Contact Query",
+            template: "EmailTemplate",
+            data: {
+                title: "New Contact Query",
+                name: name,
+                email: email,
+                phone: phone,
+                services: contact.services,
+                description: description
+            }
+        });
+
+        await sendTemplateEmail({
+            to: "business@creadivsol.com",
+            subject: "New Contact Query",
+            template: "EmailTemplate",
+            data: {
+                title: "New Contact Query",
+                name: name,
+                email: email,
+                phone: phone,
+                services: contact.services,
+                description: description
+            }
+        });
+
+        await sendThankYouContact({
+            to: email,
+            subject: "Thank You For Connecting With CreadivSol",
+            template: "ContactThankYou",
+            data: {
+                title: "Thank You",
+                message: `Please Wait Our Team Will Respond To You Within 24 hours`,
+            }
+        });
+
 
     } catch (error) {
         console.error("ContactUs Error:", error);

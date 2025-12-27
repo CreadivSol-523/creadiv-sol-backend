@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #7165d2;
+            background-image: url('https://www.creadivsol.com/Images/LandingPage/NeedSupportSection/NeedSupportBgImg.svg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .header {
+            padding: 60px 20px 40px 20px;
+            text-align: center;
+        }
+
+        .logo img {
+            max-width: 300px;
+            height: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .content {
+            padding: 20px 40px 40px 40px;
+        }
+
+        .content h1 {
+            color: #ffffff;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: left;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .content p {
+            color: #ffffff;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .content .message {
+            margin-bottom: 30px;
+        }
+
+        .divider {
+            height: 2px;
+            background-color: white;
+            margin: 30px 0 20px 0;
+        }
+
+        .support-section {
+            text-align: left;
+            padding: 0;
+        }
+
+        .support-section p {
+            color: #ffffff;
+            font-size: 15px;
+            margin: 0;
+        }
+
+        .support-section a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .support-section a:hover {
+            border-bottom: 2px solid #ffffff;
+        }
+
+        .footer {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 20px 40px;
+            text-align: center;
+        }
+
+        .footer p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">
+                <img src="https://res.cloudinary.com/dpkjkod3n/image/upload/fl_preserve_transparency/v1766795161/Group_2085664878_2_dqfpxy.jpg?_s=public-apps"
+                    alt="Creadiv Solutions Logo">
+            </div>
+        </div>
+
+        <div class="content">
+            <h1>
+                <%= title %>
+            </h1>
+
+            <div class="message">
+                <p>
+                    <%= message %>
+                </p>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="support-section">
+                <p><strong>For Support Contact:</strong> <a
+                        href="mailto:business@creadivsol.com">business@creadivsol.com</a></p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2024 Creadiv Solutions. All rights reserved.</p>
+            <p>This email was sent to you by Creadiv Solutions.</p>
+        </div>
+    </div>
+</body>
+
+</html>
