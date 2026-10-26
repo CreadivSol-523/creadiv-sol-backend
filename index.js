@@ -15,6 +15,7 @@ import connectDB from "./config/DB.js";
 // Routes
 import PortfolioRoutes from "./routes/PortfolioRoutes.js";
 import ContactRoutes from "./routes/ContactRoutes.js";
+import BlogRoutes from "./routes/BlogRoutes.js";
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
 // Cloudinary
@@ -40,6 +41,7 @@ app.use(
 );
 
 app.use("/api", PortfolioRoutes);
+app.use("/api", BlogRoutes);
 
 // === Global Middlewares ===
 app.use(express.json({ limit: "100mb" }));
